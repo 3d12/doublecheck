@@ -1,0 +1,23 @@
+[project]
+name = "doublecheck"
+version = "0.0.1"
+authors = [
+  { name="Nick Edner", email="nick@edner.dev" },
+]
+description = "A web-based chess game database, for sharing and reviewing games."
+dependencies = [
+  "flask",
+]
+requires-python = ">=3.8"
+license = { file="LICENSE.txt" }
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["doublecheck"]
