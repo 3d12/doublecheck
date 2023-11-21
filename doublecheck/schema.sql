@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS post;
+DROP TABLE IF EXISTS file;
 
 CREATE TABLE user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,4 +33,15 @@ CREATE TABLE post (
   title TEXT NOT NULL,
   body TEXT NOT NULL,
   FOREIGN KEY (author_id) REFERENCES user (id)
+);
+
+CREATE TABLE file (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uploader_id INTEGER NOT NULL,
+  post_id INTEGER NOT NULL,
+  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  file_name TEXT NOT NULL,
+  file_contents TEXT NOT NULL,
+  FOREIGN KEY (uploader_id) REFERENCES user (id),
+  FOREIGN KEY (post_id) REFERENCES post (id)
 );

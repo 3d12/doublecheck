@@ -37,6 +37,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         {% endif %}
       </header>
       <p class="body">{{ post['body'] }}</p>
+      {{ post['svg_image'] }}
+      <p>{{ post['pgn_data'] }}</p>
     </article>
     {% if not loop.last %}
       <hr>

@@ -29,7 +29,11 @@ def create_app(test_config=None):
             # Registration is disabled by default, can be enabled via admin control panel
             REGISTRATION_ENABLED=False,
             # First user created will have admin role by default
-            CREATE_FIRST_USER_AS_ADMIN=True
+            CREATE_FIRST_USER_AS_ADMIN=True,
+            # Max content length controls the allowed size of uploaded files, defaults to 16MB
+            MAX_CONTENT_LENGTH=16*1000*1000,
+            # Allowed filetypes for upload, defaults to .txt and .pgn
+            ALLOWED_FILETYPES=['txt','pgn']
             )
 
     if test_config is None:

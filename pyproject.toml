@@ -1,12 +1,13 @@
 [project]
 name = "doublecheck"
-version = "0.0.2"
+version = "0.0.2a"
 authors = [
   { name="Nick Edner", email="nick@edner.dev" },
 ]
 description = "A web-based chess game database, for sharing and reviewing games."
 dependencies = [
   "flask",
+  "chess",
 ]
 requires-python = ">=3.8"
 license = { file="LICENSE.txt" }

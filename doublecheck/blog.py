@@ -16,10 +16,15 @@
 from flask import (
         Blueprint, current_app, flash, g, redirect, render_template, request, url_for
         )
+from markupsafe import Markup
 from werkzeug.exceptions import abort
+from werkzeug.utils import secure_filename
 
 from doublecheck.auth import login_required
 from doublecheck.db import get_db
+
+import chess.pgn, chess.svg
+import io
 
 bp = Blueprint('blog', __name__)
 
@@ -37,11 +42,20 @@ def index():
 
     db = get_db()
     posts = db.execute(
-            'SELECT p.id, p.title, p.body, p.created, p.author_id, u.username'
-            ' FROM post p JOIN user u ON (p.author_id = u.id)'
-            ' ORDER BY created DESC'
+            'SELECT p.id, p.title, p.body, p.created, p.author_id, u.username, f.file_contents'
+            ' FROM post p '
+            ' JOIN user u ON (p.author_id = u.id)'
+            ' JOIN file f ON (p.id = f.post_id)'
+            ' ORDER BY p.created DESC'
             ).fetchall()
-    return render_template('blog/index.html', posts=posts)
+    new_posts = [dict(e) for e in posts]
+    for post in new_posts:
+        pgn_data = chess.pgn.read_game(io.StringIO(str(post['file_contents'])))
+        if pgn_data is None:
+            continue
+        post['svg_image'] = Markup(chess.svg.board(pgn_data.end().board(), size=350))
+        post['pgn_data'] = Markup(pgn_data.accept(chess.pgn.StringExporter(columns=40, headers=False, variations=False)))
+    return render_template('blog/index.html', posts=new_posts)
 
 @bp.route('/create', methods=('GET','POST'))
 @login_required
@@ -57,11 +71,30 @@ def create():
         if error is not None:
             flash(error)
         else:
+            # first make the post, so we can use the post id in saving the file
             db = get_db()
-            db.execute('INSERT INTO post (title, body, author_id) VALUES (?, ?, ?)',
+            cursor = db.execute('INSERT INTO post (title, body, author_id) VALUES (?, ?, ?)',
                        (title, body, g.user['id'])
                        )
             db.commit()
+            if 'pgn_file' in request.files:
+                file = request.files['pgn_file']
+                if file and '.' in file.filename and file.filename.rsplit('.',1)[1].lower() in current_app.config['ALLOWED_FILETYPES']: # pyright: ignore
+                    # TODO: Validate that the file contains actual PGN data, even though it matches the correct
+                    #   extension this doesn't mean it's automatically valid
+                    file_contents = str(file.read())
+                    pgn_data = io.StringIO(file_contents)
+                    game_tree = chess.pgn.read_game(pgn_data)
+                    if game_tree is None:
+                        flash(str(f"Invalid PGN: {file_contents}"))
+                        return redirect(url_for('blog.index'))
+                    post_id = cursor.lastrowid
+                    file_name = secure_filename(file.filename) # pyright: ignore
+                    db = get_db()
+                    db.execute('INSERT INTO file (uploader_id, post_id, file_name, file_contents) VALUES (?, ?, ?, ?)',
+                               (g.user['id'], post_id, file_name, file_contents)
+                               )
+                    db.commit()
             return redirect(url_for('blog.index'))
 
     return render_template('blog/create.html')
