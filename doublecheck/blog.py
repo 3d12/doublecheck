@@ -14,7 +14,7 @@
 #You should have received a copy of the GNU Affero General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from flask import (
-        Blueprint, flash, g, redirect, render_template, request, url_for
+        Blueprint, current_app, flash, g, redirect, render_template, request, url_for
         )
 from werkzeug.exceptions import abort
 
@@ -25,6 +25,16 @@ bp = Blueprint('blog', __name__)
 
 @bp.route('/')
 def index():
+    # If config is set up to create first user as admin,
+    #   we should first confirm this config by checking the
+    #   db state
+    create_first_user_as_admin = current_app.config.get('CREATE_FIRST_USER_AS_ADMIN', False)
+    if create_first_user_as_admin:
+        db = get_db()
+        result = db.execute('SELECT count(id) as user_count FROM user').fetchone()
+        if result['user_count'] != 0:
+            current_app.config['CREATE_FIRST_USER_AS_ADMIN'] = False
+
     db = get_db()
     posts = db.execute(
             'SELECT p.id, p.title, p.body, p.created, p.author_id, u.username'

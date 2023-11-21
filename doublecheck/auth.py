@@ -36,9 +36,20 @@ bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @bp.route('/register', methods=('GET','POST'))
 def register():
+    # If config is set up to create first user as admin,
+    #   we should first confirm this config by checking the
+    #   db state
+    create_first_user_as_admin = current_app.config.get('CREATE_FIRST_USER_AS_ADMIN', False)
+    if create_first_user_as_admin:
+        db = get_db()
+        result = db.execute('SELECT count(id) as user_count FROM user').fetchone()
+        if result['user_count'] != 0:
+            current_app.config['CREATE_FIRST_USER_AS_ADMIN'] = False
+            create_first_user_as_admin = False
+
     # If registration is not enabled, redirect to the index
-    enabled = current_app.config.get('REGISTRATION_ENABLED', False)
-    if not enabled:
+    registration_enabled = current_app.config.get('REGISTRATION_ENABLED', False)
+    if not create_first_user_as_admin and not registration_enabled:
         error = 'Registration is currently disabled'
         flash(error)
         return redirect(url_for('index'))
@@ -56,13 +67,16 @@ def register():
 
         if error is None:
             try:
+                new_user_role = Roles.ADMIN.value if create_first_user_as_admin else Roles.USER.value
                 db.execute('INSERT INTO user (username, password, role) VALUES (?, ?, ?)',
-                           (username, generate_password_hash(password), Roles.USER.value)
+                           (username, generate_password_hash(password), new_user_role)
                            )
                 db.commit()
             except db.IntegrityError:
                 error = f'User {username} is already registered'
             else:
+                if create_first_user_as_admin:
+                    current_app.config['CREATE_FIRST_USER_AS_ADMIN'] = False
                 return redirect(url_for('auth.login'))
 
         flash(error)

@@ -24,7 +24,7 @@ with open(os.path.join(os.path.dirname(__file__), 'data.sql'), 'rb') as f:
     _data_sql = f.read().decode('utf8')
 
 @pytest.fixture
-def app():
+def app_with_no_data():
     db_fd, db_path = tempfile.mkstemp()
 
     app = create_app({
@@ -34,12 +34,18 @@ def app():
 
     with app.app_context():
         init_db()
-        get_db().executescript(_data_sql)
 
     yield app
 
     os.close(db_fd)
     os.unlink(db_path)
+
+
+@pytest.fixture
+def app(app_with_no_data):
+    with app_with_no_data.app_context():
+        get_db().executescript(_data_sql)
+    return app_with_no_data
 
 @pytest.fixture
 def client(app):

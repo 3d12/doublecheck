@@ -59,7 +59,8 @@ def test_admin_config_update(client, auth, app):
 def test_config_registration_disabled(client, app):
     # make sure config is off
     with app.app_context():
-        assert app.config['REGISTRATION_ENABLED'] == False
+        if app.config['REGISTRATION_ENABLED'] == True:
+            app.config['REGISTRATION_ENABLED'] = False
 
     # attempt to GET page
     response = client.get('/auth/register')

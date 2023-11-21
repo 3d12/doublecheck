@@ -1,9 +1,11 @@
 # Development
 
 1. Clone the repo
-  > git clone (TODO)
+  > git clone https://github.com/3d12/doublecheck.git
 2. Make new changes, commit to feature branch
-3. Before submitting PR for merge, ensure new changes are tested and have good coverage
+3. For dev testing, stand up a local development server using Flask
+    > flask --app doublecheck run --debug
+4. Before submitting PR for merge, ensure new changes are tested and have good coverage
   - Testing:
     > pytest
     or (sometimes needed if pytest won't use new db schema)

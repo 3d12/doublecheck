@@ -14,8 +14,53 @@
 #You should have received a copy of the GNU Affero General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import pytest
-from flask import g, session
+from flask import current_app, g, session
 from doublecheck.db import get_db
+from doublecheck.auth import Roles
+
+@pytest.mark.parametrize(('create_first_user_as_admin', 'registration_enabled'), (
+    (True, True),
+    (True, False),
+    (False, True),
+    (False, False)
+    ))
+def test_first_registration(app_with_no_data, create_first_user_as_admin, registration_enabled):
+    # load a version of the app which has no data in the db
+    client = app_with_no_data.test_client()
+    with app_with_no_data.app_context():
+        current_app.config['CREATE_FIRST_USER_AS_ADMIN'] = create_first_user_as_admin
+        current_app.config['REGISTRATION_ENABLED'] = registration_enabled
+        # make sure register link appears on index, but only if
+        #   registration is enabled or the first user should be
+        #   set up as admin
+        if current_app.config['CREATE_FIRST_USER_AS_ADMIN'] or current_app.config['REGISTRATION_ENABLED']:
+            response = client.get('/')
+            assert b'href="/auth/register"' in response.data
+            # register new user
+            response = client.post(
+                    '/auth/register',
+                    data={'username': 'firstuser', 'password': 'admin'}
+                    )
+            assert response.headers['Location'] == '/auth/login'
+            # make sure register link no longer appears on index, but only if
+            #   registration is supposed to be disabled
+            if not current_app.config['REGISTRATION_ENABLED']:
+                response = client.get('/')
+                assert b'href="/auth/register"' not in response.data
+            # login as new user
+            response = client.post(
+                    '/auth/login',
+                    data={'username': 'firstuser', 'password': 'admin'}
+                    )
+            assert response.headers['Location'] == '/'
+            # make sure admin link appears on index, but only if
+            #   that first user should have been set up as admin
+            if current_app.config['CREATE_FIRST_USER_AS_ADMIN']:
+                response = client.get('/')
+                assert b'href="/admin/"' in response.data
+                # and validate db has correct value for role
+                user_data = get_db().execute('SELECT * FROM user WHERE username = ?', ('firstuser',)).fetchone()
+                assert user_data['role'] == Roles.ADMIN.value
 
 def test_register(client, app):
     # make sure registration is enabled via config

@@ -27,7 +27,9 @@ def create_app(test_config=None):
             SECRET_KEY='dev',
             DATABASE=os.path.join(app.instance_path, 'doublecheck.sqlite'),
             # Registration is disabled by default, can be enabled via admin control panel
-            REGISTRATION_ENABLED=False
+            REGISTRATION_ENABLED=False,
+            # First user created will have admin role by default
+            CREATE_FIRST_USER_AS_ADMIN=True
             )
 
     if test_config is None:

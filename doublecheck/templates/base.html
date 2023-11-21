@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
       {% endif %}
       <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
     {% else %}
-      {% if app_config['REGISTRATION_ENABLED'] %}
+      {% if app_config['REGISTRATION_ENABLED'] or app_config['CREATE_FIRST_USER_AS_ADMIN'] %}
         <li><a href="{{ url_for('auth.register') }}">Register</a></li>
       {% endif %}
       <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
