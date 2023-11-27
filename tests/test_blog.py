@@ -13,6 +13,8 @@
 
 #You should have received a copy of the GNU Affero General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import os
+import tempfile
 import pytest
 from doublecheck.db import get_db
 
@@ -27,6 +29,8 @@ def test_index(client, auth):
     assert b'by test on 2018-01-01' in response.data
     assert b'test\nbody' in response.data
     assert b'href="/1/update"' in response.data
+    assert b'<svg' in response.data
+    assert b'1. e4 e5 2. d4 Nf6' in response.data
 
 @pytest.mark.parametrize('path', (
     '/create',
@@ -51,23 +55,91 @@ def test_author_required(app, client, auth):
     # current user doesn't see edit link
     assert b'href="/1/update"' not in client.get('/').data
 
-@pytest.mark.parametrize('path', (
-    '/2/update',
-    '/2/delete'
-    ))
-def test_exists_required(client, auth, path):
+def test_exists_required(client, auth, app):
+    # get max id so we know which one won't exist
+    with app.app_context():
+        db = get_db()
+        max_id = db.execute('SELECT max(id) FROM post').fetchone()[0]
+    invalid_post_id = max_id+1
+
     auth.login()
+    # first try update
+    path = f'/{invalid_post_id}/update'
+    assert client.post(path).status_code == 404
+    # next try delete
+    path = f'/{invalid_post_id}/delete'
     assert client.post(path).status_code == 404
 
 def test_create(client, auth, app):
+    # get count before insert
+    with app.app_context():
+        db = get_db()
+        starting_count = db.execute('SELECT count(id) FROM post').fetchone()[0]
+
     auth.login()
     assert client.get('/create').status_code == 200
     client.post('/create', data={'title': 'created', 'body': ''})
 
+    # get count after insert
     with app.app_context():
         db = get_db()
-        count = db.execute('SELECT count(id) FROM post').fetchone()[0]
-        assert count == 2
+        ending_count = db.execute('SELECT count(id) FROM post').fetchone()[0]
+        assert ending_count == starting_count+1
+
+@pytest.mark.parametrize(('pgn_suffix', 'pgn_contents'), (
+    ('valid.pgn', b'[Event "test event 2"]\n[Site "test site 2"]\n[Date "2023.10.17"]\n[Round "4"]\n[White "foo"]\n[Black "bar"]\n[Result "0-1"]\n\n1. e4 e5 2. d4 Nf6 3. Nc3 Nc6 4. d5 Nd4 5. Nf3 c5 6. Nxe5 Bd6 7. Bf4 O-O { test comment } 8. Nxf7 Rxf7 0-1'),
+    ('valid.txt', b'[Event "test event 2"]\n[Site "test site 2"]\n[Date "2023.10.17"]\n[Round "4"]\n[White "foo"]\n[Black "bar"]\n[Result "0-1"]\n\n1. e4 e5 2. d4 Nf6 3. Nc3 Nc6 4. d5 Nd4 5. Nf3 c5 6. Nxe5 Bd6 7. Bf4 O-O { test comment } 8. Nxf7 Rxf7 0-1')
+    ))
+def test_create_with_pgn(client, auth, app, pgn_suffix, pgn_contents):
+    # save max_file_id for comparison later
+    with app.app_context():
+        db = get_db()
+        max_file_id = db.execute('SELECT max(id) FROM file').fetchone()[0]
+
+    # create file
+    pgn_fd, pgn_path = tempfile.mkstemp(suffix=pgn_suffix)
+    os.write(pgn_fd, pgn_contents)
+    os.close(pgn_fd)
+
+    # create new post with file attached
+    auth.login()
+    assert client.get('/create').status_code == 200
+    with open(pgn_path, 'rb') as f:
+        response = client.post('/create',
+                    data={'title': 'test with pgn', 'body': 'test body with pgn', 'pgn_file': f}
+                    )
+    assert response.headers['Location'] == '/'
+    os.unlink(pgn_path)
+
+    # check to make sure file got inserted to db
+    with app.app_context():
+        db = get_db()
+        file = db.execute('SELECT * FROM file WHERE id = ?', (max_file_id+1,)).fetchone()
+        assert pgn_suffix in file['file_name']
+        assert str(pgn_contents) in file['file_contents']
+
+@pytest.mark.parametrize(('pgn_suffix', 'pgn_contents', 'error'), (
+    ('not_a_pgn.png', b'[Event "test event 2"]\n[Site "test site 2"]\n[Date "2023.10.17"]\n[Round "4"]\n[White "foo"]\n[Black "bar"]\n[Result "0-1"]\n\n1. e4 e5 2. d4 Nf6 3. Nc3 Nc6 4. d5 Nd4 5. Nf3 c5 6. Nxe5 Bd6 7. Bf4 O-O { test comment } 8. Nxf7 Rxf7 0-1', b'must be .pgn'),
+    ('empty.pgn', b'', b'empty file'),
+    ('newline.pgn', b'\n', b'unable to parse first move'),
+    ('lyrics.pgn', b'Liberty, energy, dignity, and breakfast tea', b'unable to parse first move'),
+    ('pgn_with_errors.pgn', b'[Event "test event 3"]\n[Site "test site 3"]\n[Date "2023.10.17"]\n[Round "4"]\n[White "foo"]\n[Black "bar"]\n[Result "0-1"]\n\n1. e4 e5 2. d4 Nf6 3. Qxf7 Nc6 4. d5 Nd4 5. Nf3 c5 6. Nxe5 Bd6 7. Bf4 O-O { test comment } 8. Nxf7 Rxf7 0-1', b'errors encountered while parsing')
+    ))
+def test_create_with_bad_pgn(client, auth, pgn_suffix, pgn_contents, error):
+    # create file
+    pgn_fd, pgn_path = tempfile.mkstemp(suffix=pgn_suffix)
+    os.write(pgn_fd, pgn_contents)
+    os.close(pgn_fd)
+
+    # create new post with file attached
+    auth.login()
+    assert client.get('/create').status_code == 200
+    with open(pgn_path, 'rb') as f:
+        response = client.post('/create',
+                    data={'title': 'test with bad pgn', 'body': 'test body with bad pgn', 'pgn_file': f}
+                    )
+    assert error in response.data
+    os.unlink(pgn_path)
 
 def test_update(client, auth, app):
     auth.login()

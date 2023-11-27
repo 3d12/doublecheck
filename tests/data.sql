@@ -23,4 +23,9 @@ VALUES
 
 INSERT INTO post (title, body, author_id, created)
 VALUES
-  ('test title', 'test' || x'0a' || 'body', 1, '2018-01-01 00:00:00');
+  ('test title', 'test' || x'0a' || 'body', 1, '2018-01-01 00:00:00'),
+  ('test title 2', 'test' || x'0a' || 'body 2', 2, '2018-01-01 00:00:00');
+
+INSERT INTO file (uploader_id, post_id, file_name, file_contents)
+VALUES
+  (2, 2, 'test_file.pgn', 'b''[Event ""test event""]\n[Site ""test site""]\n[Date ""2023.10.17""]\n[Round ""4""]\n[White ""foo""]\n[Black ""bar""]\n[Result ""0-1""]\n\n1. e4 e5 2. d4 Nf6 3. Nc3 Nc6 4. d5 Nd4 5. Nf3 c5 6. Nxe5 Bd6 7. Bf4 O-O { test comment } 8. Nxf7 Rxf7 0-1\''');

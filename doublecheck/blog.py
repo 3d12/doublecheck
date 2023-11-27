@@ -17,6 +17,7 @@ from flask import (
         Blueprint, current_app, flash, g, redirect, render_template, request, url_for
         )
 from markupsafe import Markup
+from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import abort
 from werkzeug.utils import secure_filename
 
@@ -45,16 +46,24 @@ def index():
             'SELECT p.id, p.title, p.body, p.created, p.author_id, u.username, f.file_contents'
             ' FROM post p '
             ' JOIN user u ON (p.author_id = u.id)'
-            ' JOIN file f ON (p.id = f.post_id)'
+            ' LEFT JOIN file f ON (p.id = f.post_id)'
             ' ORDER BY p.created DESC'
             ).fetchall()
     new_posts = [dict(e) for e in posts]
+
+    # populate image and pgn data fields in posts, but only where an associated file exists
     for post in new_posts:
-        pgn_data = chess.pgn.read_game(io.StringIO(str(post['file_contents'])))
-        if pgn_data is None:
+        if post['file_contents'] is None:
             continue
-        post['svg_image'] = Markup(chess.svg.board(pgn_data.end().board(), size=350))
-        post['pgn_data'] = Markup(pgn_data.accept(chess.pgn.StringExporter(columns=40, headers=False, variations=False)))
+        pgn_data = chess.pgn.read_game(io.StringIO(str(post['file_contents'])))
+        # the parser is VERY loose, even if the file looks nothing like a PGN it will
+        #   still usually parse out at least one move of 1. --
+        # so we don't have to worry about read_game returning None here, since it
+        #   will only do that with an empty file and those are being filtered out upon
+        #   insertion to the db
+        post['svg_image'] = Markup(chess.svg.board(pgn_data.end().board(), size=350)) # pyright: ignore
+        post['pgn_data'] = Markup(pgn_data.accept(chess.pgn.StringExporter(columns=40, headers=False, variations=False))) # pyright: ignore
+
     return render_template('blog/index.html', posts=new_posts)
 
 @bp.route('/create', methods=('GET','POST'))
@@ -68,6 +77,10 @@ def create():
         if title == '':
             error = 'Title is required'
 
+        # first validate the pgn file, if one was included
+        if 'pgn_file' in request.files:
+            error = check_pgn_for_errors(request.files['pgn_file'])
+
         if error is not None:
             flash(error)
         else:
@@ -77,24 +90,17 @@ def create():
                        (title, body, g.user['id'])
                        )
             db.commit()
+            # then insert the pgn data, if one exists (we know by now it's passed validation)
             if 'pgn_file' in request.files:
+                post_id = cursor.lastrowid
                 file = request.files['pgn_file']
-                if file and '.' in file.filename and file.filename.rsplit('.',1)[1].lower() in current_app.config['ALLOWED_FILETYPES']: # pyright: ignore
-                    # TODO: Validate that the file contains actual PGN data, even though it matches the correct
-                    #   extension this doesn't mean it's automatically valid
-                    file_contents = str(file.read())
-                    pgn_data = io.StringIO(file_contents)
-                    game_tree = chess.pgn.read_game(pgn_data)
-                    if game_tree is None:
-                        flash(str(f"Invalid PGN: {file_contents}"))
-                        return redirect(url_for('blog.index'))
-                    post_id = cursor.lastrowid
-                    file_name = secure_filename(file.filename) # pyright: ignore
-                    db = get_db()
-                    db.execute('INSERT INTO file (uploader_id, post_id, file_name, file_contents) VALUES (?, ?, ?, ?)',
-                               (g.user['id'], post_id, file_name, file_contents)
-                               )
-                    db.commit()
+                file_contents = file.stream.read()
+                file_name = secure_filename(str(file.filename))
+                db = get_db()
+                db.execute('INSERT INTO file (uploader_id, post_id, file_name, file_contents) VALUES (?, ?, ?, ?)',
+                           (g.user['id'], post_id, file_name, str(file_contents))
+                           )
+                db.commit()
             return redirect(url_for('blog.index'))
 
     return render_template('blog/create.html')
@@ -150,3 +156,30 @@ def delete(id):
     db.commit()
     return redirect(url_for('blog.index'))
 
+def check_pgn_for_errors(pgn: FileStorage):
+    # first validate the pgn file, if one was included
+    # file must have valid extension
+    if not pgn.filename or '.' not in pgn.filename or pgn.filename.rsplit('.',1)[1].lower() not in current_app.config['ALLOWED_FILETYPES']:
+        return "Invalid PGN: file extension invalid, must be .pgn or .txt"
+    # file must contain data
+    pgn_contents = pgn.stream.read()
+    if pgn_contents == b'':
+        return "Invalid PGN: empty file"
+    else:
+        # rewind the stream buffer so it can be read from again later
+        pgn.stream.seek(0)
+    # file must successfully parse as PGN
+    pgn_data = io.StringIO(str(pgn_contents))
+    game_tree = chess.pgn.read_game(pgn_data)
+    # the only way game_tree.game can return None is if the input StringIO
+    #   is empty, but we are already checking for empty file contents before this
+    game = game_tree.game() # pyright: ignore
+    if len(game.errors) > 0:
+        return f"Invalid PGN: errors encountered while parsing: {str(game.errors)}"
+    # the parser is VERY loose, even if the file looks nothing like a PGN it will
+    #   still usually parse out at least one move of 1. --
+    first_move = game.next()
+    if first_move is None or str(first_move)[:5] == '1. --':
+        return f"Invalid PGN, unable to parse first move: {str(pgn_contents)}"
+    # all validations passed
+    return None
