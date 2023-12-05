@@ -1,0 +1,60 @@
+<!--
+Doublecheck - A web-based chess game database.
+Copyright (C) 2023 Nick Edner
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}View Game: {{ game.game().headers['Event'] }} - {{ game.game().headers['Date'] }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<h3>Turn {{ game.ply() }}</h3>
+<div class="horizontal-button-wrapper">
+  {% if game.ply() > 0 %}
+  <form method="post">
+    <input type="submit" name="firstMove" value="<<">
+  </form>
+  <form method="post">
+    <input type="submit" name="prevMove" value="<">
+  </form>
+  {% else %}
+  <form method="post">
+    <input type="submit" name="firstMove" value="<<" disabled>
+  </form>
+  <form method="post">
+    <input type="submit" name="prevMove" value="<" disabled>
+  </form>
+  {% endif %}
+  {{ game_image }}
+  {% if not game.is_end() %}
+  <form method="post">
+    <input type="submit" name="nextMove" value=">">
+  </form>
+  <form method="post">
+    <input type="submit" name="lastMove" value=">>">
+  </form>
+  {% else %}
+  <form method="post">
+    <input type="submit" name="nextMove" value=">" disabled>
+  </form>
+  <form method="post">
+    <input type="submit" name="lastMove" value=">>" disabled>
+  </form>
+  {% endif %}
+</div>
+{{ game }}
+{% endblock %}

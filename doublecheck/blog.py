@@ -43,7 +43,7 @@ def index():
 
     db = get_db()
     posts = db.execute(
-            'SELECT p.id, p.title, p.body, p.created, p.author_id, u.username, f.file_contents'
+            'SELECT p.id, p.title, p.body, p.created, p.author_id, u.username, f.id as game_id, f.file_contents'
             ' FROM post p '
             ' JOIN user u ON (p.author_id = u.id)'
             ' LEFT JOIN file f ON (p.id = f.post_id)'
@@ -63,6 +63,8 @@ def index():
         #   insertion to the db
         post['svg_image'] = Markup(chess.svg.board(pgn_data.end().board(), size=350)) # pyright: ignore
         post['pgn_data'] = Markup(pgn_data.accept(chess.pgn.StringExporter(columns=40, headers=False, variations=False))) # pyright: ignore
+        post['pgn_event'] = pgn_data.headers['Event'] # pyright: ignore
+        post['pgn_date'] = pgn_data.headers['Date'] # pyright: ignore
 
     return render_template('blog/index.html', posts=new_posts)
 

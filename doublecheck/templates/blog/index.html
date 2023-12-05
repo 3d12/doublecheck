@@ -37,8 +37,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         {% endif %}
       </header>
       <p class="body">{{ post['body'] }}</p>
+      {% if post.get('game_id') != None %}
+      <h3>{{ post['pgn_event'] }} - {{ post['pgn_date'] }}</h3>
       {{ post['svg_image'] }}
-      <p>{{ post['pgn_data'] }}</p>
+      <br />
+      <a href="{{ url_for('game.view', game_id=post['game_id']) }}">View Game</a>
+      {% endif %}
     </article>
     {% if not loop.last %}
       <hr>

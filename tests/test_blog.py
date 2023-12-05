@@ -30,7 +30,7 @@ def test_index(client, auth):
     assert b'test\nbody' in response.data
     assert b'href="/1/update"' in response.data
     assert b'<svg' in response.data
-    assert b'1. e4 e5 2. d4 Nf6' in response.data
+    assert b'href="/game/1/view"' in response.data
 
 @pytest.mark.parametrize('path', (
     '/create',

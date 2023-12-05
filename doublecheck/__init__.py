@@ -76,6 +76,9 @@ def create_app(test_config=None):
     from . import admin
     app.register_blueprint(admin.bp)
 
+    from . import game
+    app.register_blueprint(game.bp)
+
     # apply proxyfix to support nginx proxy in front of the app
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
