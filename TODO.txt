@@ -1,0 +1,12 @@
+# TODO
+1. Create admin user control panel, to add, edit, or delete users
+2. Create admin log page, where all admin actions logged are displayed
+3. Add "display name" to register page and user table
+  - Implement display name into the main blog page
+4. Add "member number" to register page and user table
+  - Implement member number into the main blog page
+  - Implement member number into the new post page, allowing white and black to reference other users
+5. Create user page, where games posted by user and games featuring user can both be seen
+6. Implement game-level comments
+  - Should see most recent X comments on the main page (along with "show more" button)
+  - Should see whole list of comments on the view game page, and have textbox to add another

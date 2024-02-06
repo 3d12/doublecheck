@@ -13,6 +13,9 @@
 
 #You should have received a copy of the GNU Affero General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
+from datetime import datetime, timezone
+from doublecheck.db import get_db
+
 def test_index(client, auth):
     response = client.get('/')
     assert b'Log In' in response.data
@@ -75,3 +78,115 @@ def test_config_registration_disabled(client, app):
     assert response.headers['Location'] == '/'
     response = client.get(response.headers['Location'])
     assert b'Registration is currently disabled' in response.data
+
+def test_user_cp(client, auth, app):
+    # login and view user cp
+    auth.login(username='admin', password='b')
+    response = client.get('/admin/user_cp')
+    assert response.status_code == 200
+    assert b'<h1>User Control Panel</h1>' in response.data
+
+    # verify that all the usernames in the database appear in the page
+    with app.app_context():
+        users = get_db().execute('SELECT * from user;').fetchall()
+    for user in users:
+        assert user['username'].encode(encoding='utf-8') in response.data
+
+    # test misc post request, should be handled gracefully
+    response = client.post(
+            '/admin/user_cp',
+            data={'testkey': 'testvalue'}
+            )
+    assert response.status_code == 200
+    assert b'POST received' in response.data
+    
+
+    # ensure logged out and non-admin users can't view the page
+    auth.logout()
+    response = client.get('/admin/user_cp')
+    assert response.status_code == 302
+    assert response.headers['Location'] == '/'
+    auth.login()
+    response = client.get('/admin/user_cp')
+    assert response.status_code == 302
+    assert response.headers['Location'] == '/'
+
+def test_deactivate_user(client, auth, app):
+    # login and verify the correct button appears on the user_cp page
+    auth.login(username='admin', password='b')
+    response = client.get('/admin/user_cp')
+    assert b'<button name="deactivate" value="2">' in response.data
+    # post request to deactivate account
+    response = client.post(
+            '/admin/user_cp',
+            data={'deactivate': '2'}
+            )
+    assert response.status_code == 302
+    assert response.headers['Location'] == '/admin/user_cp'
+    # validate deactivation
+    # capture current time to compare to deactivated time
+    #   (round to nearest second because sqlite current_timestamp only
+    #   captures to the second)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    with app.app_context():
+        user_status = get_db().execute(
+                'SELECT id, active, deactivated'
+                ' FROM user'
+                ' WHERE id = 2',
+                ).fetchone()
+        assert user_status['active'] == 0
+        # add tzinfo to db data so direct equality comparison will work
+        assert user_status['deactivated'].replace(tzinfo=timezone.utc) == now
+
+    # confirm that we cannot deactivate our own user via user cp
+    # first check for lack of button
+    response = client.get('/admin/user_cp')
+    assert b'<button name="deactivate" value="3">' not in response.data
+    # send the deactivation request anyway
+    response = client.post(
+            '/admin/user_cp',
+            data={'deactivate': '3'}
+            )
+    assert response.status_code == 302
+    assert response.headers['Location'] == '/admin/user_cp'
+    response = client.get(response.headers['Location'])
+    # check for error message
+    assert b'cannot deactivate your own account here' in response.data
+    # make sure the deactivation did not actually happen
+    with app.app_context():
+        user_status = get_db().execute(
+                'SELECT id, active, deactivated'
+                ' FROM user'
+                ' WHERE id = 3',
+                ).fetchone()
+        assert user_status['active'] == 1
+        assert user_status['deactivated'] == None
+
+def test_activate_user(client, auth, app):
+    # stage account id 2 as deactivated
+    with app.app_context():
+        db = get_db()
+        db.execute('UPDATE user SET active = 0, deactivated = current_timestamp WHERE id = 2')
+        db.commit()
+
+    # login and verify the correct button appears on the user_cp page
+    auth.login(username='admin', password='b')
+    response = client.get('/admin/user_cp')
+    assert b'<button name="activate" value="2">' in response.data
+    # post request to activate account
+    response = client.post(
+            '/admin/user_cp',
+            data={'activate': '2'}
+            )
+    assert response.status_code == 302
+    assert response.headers['Location'] == '/admin/user_cp'
+
+    # validate activation
+    with app.app_context():
+        user_status = get_db().execute(
+                'SELECT id, active, deactivated'
+                ' FROM user'
+                ' WHERE id = 2',
+                ).fetchone()
+        assert user_status['active'] == 1
+        assert user_status['deactivated'] == None

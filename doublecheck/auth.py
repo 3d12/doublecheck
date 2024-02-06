@@ -96,6 +96,8 @@ def login():
             error = 'Invalid username'
         elif not check_password_hash(user['password'], password):
             error = 'Invalid password'
+        elif user['active'] == 0:
+            error = 'Deactivated account'
 
         if error is None:
             session.clear()

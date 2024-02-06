@@ -63,8 +63,9 @@ def index():
         #   insertion to the db
         post['svg_image'] = Markup(chess.svg.board(pgn_data.end().board(), size=350)) # pyright: ignore
         post['pgn_data'] = Markup(pgn_data.accept(chess.pgn.StringExporter(columns=40, headers=False, variations=False))) # pyright: ignore
-        post['pgn_event'] = pgn_data.headers['Event'] # pyright: ignore
-        post['pgn_date'] = pgn_data.headers['Date'] # pyright: ignore
+        #post['pgn_event'] = pgn_data.headers['Event'] # pyright: ignore
+        #post['pgn_date'] = pgn_data.headers['Date'] # pyright: ignore
+        post['pgn_headers'] = pgn_data.headers # pyright: ignore
 
     return render_template('blog/index.html', posts=new_posts)
 
@@ -100,7 +101,7 @@ def create():
                 file_name = secure_filename(str(file.filename))
                 db = get_db()
                 db.execute('INSERT INTO file (uploader_id, post_id, file_name, file_contents) VALUES (?, ?, ?, ?)',
-                           (g.user['id'], post_id, file_name, str(file_contents))
+                           (g.user['id'], post_id, file_name, file_contents.decode("UTF-8"))
                            )
                 db.commit()
             return redirect(url_for('blog.index'))
@@ -171,8 +172,8 @@ def check_pgn_for_errors(pgn: FileStorage):
         # rewind the stream buffer so it can be read from again later
         pgn.stream.seek(0)
     # file must successfully parse as PGN
-    pgn_data = io.StringIO(str(pgn_contents))
-    game_tree = chess.pgn.read_game(pgn_data)
+    pgn_stringio = io.StringIO(str(pgn_contents))
+    game_tree = chess.pgn.read_game(pgn_stringio)
     # the only way game_tree.game can return None is if the input StringIO
     #   is empty, but we are already checking for empty file contents before this
     game = game_tree.game() # pyright: ignore

@@ -38,10 +38,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
       </header>
       <p class="body">{{ post['body'] }}</p>
       {% if post.get('game_id') != None %}
-      <h3>{{ post['pgn_event'] }} - {{ post['pgn_date'] }}</h3>
-      {{ post['svg_image'] }}
-      <br />
-      <a href="{{ url_for('game.view', game_id=post['game_id']) }}">View Game</a>
+        <h3>
+            {{ post['pgn_headers']['White'] }}
+            vs 
+            {{ post['pgn_headers']['Black'] }}, 
+            {{ post['pgn_headers']['Event'] }}
+            {{ " (Round " + post['pgn_headers']['Round'] + ")" if post['pgn_headers']['Round'] != "" else "" }}
+            -- 
+            {{ post['pgn_headers']['Date'] }}
+        </h3>
+        <p><i>Ending position:</i></p>
+        {{ post['svg_image'] }}
+        <br />
+        <a href="{{ url_for('game.view', game_id=post['game_id']) }}">View Game</a>
       {% endif %}
     </article>
     {% if not loop.last %}

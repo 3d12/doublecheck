@@ -116,7 +116,7 @@ def test_create_with_pgn(client, auth, app, pgn_suffix, pgn_contents):
         db = get_db()
         file = db.execute('SELECT * FROM file WHERE id = ?', (max_file_id+1,)).fetchone()
         assert pgn_suffix in file['file_name']
-        assert str(pgn_contents) in file['file_contents']
+        assert pgn_contents.decode(encoding='utf-8') in file['file_contents']
 
 @pytest.mark.parametrize(('pgn_suffix', 'pgn_contents', 'error'), (
     ('not_a_pgn.png', b'[Event "test event 2"]\n[Site "test site 2"]\n[Date "2023.10.17"]\n[Round "4"]\n[White "foo"]\n[Black "bar"]\n[Result "0-1"]\n\n1. e4 e5 2. d4 Nf6 3. Nc3 Nc6 4. d5 Nd4 5. Nf3 c5 6. Nxe5 Bd6 7. Bf4 O-O { test comment } 8. Nxf7 Rxf7 0-1', b'must be .pgn'),

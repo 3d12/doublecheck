@@ -18,7 +18,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 {% extends 'base.html' %}
 
 {% block header %}
-<h1>{% block title %}View Game: {{ game.game().headers['Event'] }} - {{ game.game().headers['Date'] }}{% endblock %}</h1>
+<h1>
+  {% block title %}
+    View Game: 
+    {{ game.game().headers['White'] }}
+    vs 
+    {{ game.game().headers['Black'] }}, 
+    {{ game.game().headers['Event'] }}
+    {{ " (Round " + game.game().headers['Round'] + ")" if game.game().headers['Round'] != "" else "" }}
+    -- 
+    {{ game.game().headers['Date'] }}
+  {% endblock %}
+</h1>
 {% endblock %}
 
 {% block content %}
