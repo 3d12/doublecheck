@@ -1,6 +1,6 @@
 /*
 Doublecheck - A web-based chess game database.
-Copyright (C) 2023 Nick Edner
+Copyright (C) 2024 Nick Edner
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
