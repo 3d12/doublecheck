@@ -26,7 +26,7 @@ CREATE TABLE user (
   role INTEGER NOT NULL,
   created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   active INTEGER NOT NULL DEFAULT 1,
-  deactivated TIMESTAMP NULL,
+  deactivated_on TIMESTAMP NULL,
   display_name TEXT NULL,
   member_number TEXT NULL,
   last_login TIMESTAMP NULL,

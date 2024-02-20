@@ -121,7 +121,7 @@ def test_login_as_deactivated_user(auth, app):
     # stage account id 2 as deactivated
     with app.app_context():
         db = get_db()
-        db.execute('UPDATE user SET active = 0, deactivated = current_timestamp WHERE id = 2')
+        db.execute('UPDATE user SET active = 0, deactivated_on = current_timestamp WHERE id = 2')
         db.commit()
 
     # attempt to login

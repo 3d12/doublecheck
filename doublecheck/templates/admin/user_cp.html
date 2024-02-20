@@ -45,7 +45,7 @@ table {
         <th scope="col">Created (GMT)</th>
         <th scope="col">Last Login (GMT)</th>
         <th scope="col">Active</th>
-        <th scope="col">Deactivated (GMT)</th>
+        <th scope="col">Deactivated On (GMT)</th>
       </tr>
     </thead>
     {% for user in users %}
@@ -58,8 +58,8 @@ table {
       <td>{{ user['created'] }}</td>
       <td>{{ user['last_login'] }}</td>
       <td>{{ user['active'] }}</td>
-      <td>{{ user['deactivated'] }}</td>
-      <td><a href="#">Edit</a></td>
+      <td>{{ user['deactivated_on'] }}</td>
+      <td><a href="{{ url_for('admin.user_edit', id=user['id']) }}">Edit</a></td>
       <td>
         {% if user['id'] != g.user['id'] %}
           {% if user['active'] == 1 %}
@@ -73,4 +73,6 @@ table {
     {% endfor %}
   </table>
 </form>
+<br />
+<a href='{{ url_for('admin.user_add') }}'>[+] Add New User</a>
 {% endblock %}

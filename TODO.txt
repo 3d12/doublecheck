@@ -1,5 +1,7 @@
 # TODO
 1. Create admin user control panel, to add, edit, or delete users
+  1a. Add unit testing for user_edit and user_add pages
+  1b. Enable 'last login' functionality via login page
 2. Create admin log page, where all admin actions logged are displayed
 3. Add "display name" to register page and user table
   - Implement display name into the main blog page

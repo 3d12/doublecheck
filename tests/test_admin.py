@@ -130,13 +130,13 @@ def test_deactivate_user(client, auth, app):
     now = datetime.now(timezone.utc).replace(microsecond=0)
     with app.app_context():
         user_status = get_db().execute(
-                'SELECT id, active, deactivated'
+                'SELECT id, active, deactivated_on'
                 ' FROM user'
                 ' WHERE id = 2',
                 ).fetchone()
         assert user_status['active'] == 0
         # add tzinfo to db data so direct equality comparison will work
-        assert user_status['deactivated'].replace(tzinfo=timezone.utc) == now
+        assert user_status['deactivated_on'].replace(tzinfo=timezone.utc) == now
 
     # confirm that we cannot deactivate our own user via user cp
     # first check for lack of button
@@ -155,18 +155,18 @@ def test_deactivate_user(client, auth, app):
     # make sure the deactivation did not actually happen
     with app.app_context():
         user_status = get_db().execute(
-                'SELECT id, active, deactivated'
+                'SELECT id, active, deactivated_on'
                 ' FROM user'
                 ' WHERE id = 3',
                 ).fetchone()
         assert user_status['active'] == 1
-        assert user_status['deactivated'] == None
+        assert user_status['deactivated_on'] == None
 
 def test_activate_user(client, auth, app):
     # stage account id 2 as deactivated
     with app.app_context():
         db = get_db()
-        db.execute('UPDATE user SET active = 0, deactivated = current_timestamp WHERE id = 2')
+        db.execute('UPDATE user SET active = 0, deactivated_on = current_timestamp WHERE id = 2')
         db.commit()
 
     # login and verify the correct button appears on the user_cp page
@@ -184,9 +184,9 @@ def test_activate_user(client, auth, app):
     # validate activation
     with app.app_context():
         user_status = get_db().execute(
-                'SELECT id, active, deactivated'
+                'SELECT id, active, deactivated_on'
                 ' FROM user'
                 ' WHERE id = 2',
                 ).fetchone()
         assert user_status['active'] == 1
-        assert user_status['deactivated'] == None
+        assert user_status['deactivated_on'] == None
