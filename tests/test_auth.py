@@ -14,6 +14,7 @@
 #You should have received a copy of the GNU Affero General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import pytest
+from datetime import datetime, timezone
 from flask import current_app, g, session
 from doublecheck.db import get_db
 from doublecheck.auth import Roles
@@ -128,3 +129,18 @@ def test_login_as_deactivated_user(auth, app):
     response = auth.login('other', 'other')
     print(response.data)
     assert b'Deactivated account' in response.data
+
+def test_last_login(auth, app):
+    # capture current time to compare to last login time
+    #   (round to nearest second because sqlite current_timestamp only
+    #   captures to the second)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    auth.login()
+    with app.app_context():
+        result = get_db().execute(
+                'SELECT id, last_login'
+                ' FROM user'
+                ' WHERE id = 1',
+                ).fetchone()
+        # add tzinfo to db data so direct equality comparison will work
+        assert result['last_login'].replace(tzinfo=timezone.utc) == now

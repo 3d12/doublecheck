@@ -13,8 +13,13 @@
 
 #You should have received a copy of the GNU Affero General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import pytest
 from datetime import datetime, timezone
+
 from doublecheck.db import get_db
+from doublecheck.auth import Roles
+
+from werkzeug.security import check_password_hash
 
 def test_index(client, auth):
     response = client.get('/')
@@ -190,3 +195,80 @@ def test_activate_user(client, auth, app):
                 ).fetchone()
         assert user_status['active'] == 1
         assert user_status['deactivated_on'] == None
+
+def test_user_edit(client, auth, app):
+    auth.login(username='admin', password='b')
+    response = client.get('/admin/user_edit/2')
+    assert response.status_code == 200
+
+    # test updating username and role
+    response = client.post(
+            '/admin/user_edit/2',
+            data={'username':'other_rename','role':'Roles.VIEWER','password':'example_password_characters','display_name':''}
+            )
+    assert response.headers['Location'] == '/admin/user_cp'
+    with app.app_context():
+        db = get_db()
+        result = db.execute('SELECT username, role FROM user WHERE id = 2').fetchone()
+        assert result['username'] == 'other_rename'
+        assert result['role'] == Roles.VIEWER.value
+
+    # test updating password
+    response = client.post(
+            '/admin/user_edit/2',
+            data={'password':'c','confirm_new_password':'c'}
+            )
+    assert response.headers['Location'] == '/admin/user_cp'
+    with app.app_context():
+        db = get_db()
+        result = db.execute('SELECT password FROM user WHERE id = 2').fetchone()
+        assert check_password_hash(result['password'], 'c')
+
+    # test bad password update attempt
+    response = client.post(
+            '/admin/user_edit/2',
+            data={'password':'c','confirm_new_password':'d'}
+            )
+    assert response.headers['Location'] == '/admin/user_edit/2'
+    response = client.get(response.headers['Location'])
+    assert b'Password must match confirmation' in response.data
+
+    # test null update (no-op)
+    response = client.post(
+            '/admin/user_edit/2',
+            data={}
+            )
+    assert response.headers['Location'] == '/admin/user_cp'
+
+    # test invalid ID
+    response = client.get('/admin/user_edit/7')
+    assert response.status_code == 404
+
+def test_user_add(client, auth, app):
+    auth.login(username='admin', password='b')
+    response = client.get('/admin/user_add')
+    assert response.status_code == 200
+    data = {'username':'new_test_user', 'password':'c', 'role':'Roles.MEMBER', 'display_name':'', 'member_number':'', 'timezone':''}
+
+    response = client.post(
+            '/admin/user_add',
+            data=data
+            )
+    assert response.headers['Location'] == '/admin/user_cp'
+    with app.app_context():
+        db = get_db()
+        result = db.execute('SELECT * FROM user WHERE id = 4').fetchone()
+        assert result['username'] == 'new_test_user'
+        assert check_password_hash(result['password'], 'c')
+        assert result['role'] == Roles.MEMBER.value
+        assert result['display_name'] == None
+        assert result['member_number'] == None
+        assert result['timezone'] == None
+
+    # test null update (no-op)
+    response = client.post(
+            '/admin/user_add',
+            data={}
+            )
+    assert response.headers['Location'] == '/admin/user_cp'
+

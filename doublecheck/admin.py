@@ -136,8 +136,8 @@ def user_edit(id):
             # Remove leading comma + space
             query_str = query_str[2:]
             full_query_str = f'UPDATE user SET {query_str} WHERE id = {id}'
-        db.execute(full_query_str, query_vars)
-        db.commit()
+            db.execute(full_query_str, query_vars)
+            db.commit()
         return redirect(url_for('admin.user_cp'))
 
     user_data = db.execute(
@@ -203,8 +203,8 @@ def user_add():
             query_str = f'({query_str})'
             query_cols = f'({query_cols})'
             full_query_str = f'INSERT INTO user {query_cols} VALUES {query_str}'
-        db.execute(full_query_str, query_vars)
-        db.commit()
+            db.execute(full_query_str, query_vars)
+            db.commit()
         return redirect(url_for('admin.user_cp'))
 
     user_params = {}
