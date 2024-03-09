@@ -57,6 +57,10 @@ def register():
     if request.method == 'POST':
         username = request.form.get('username', '')
         password = request.form.get('password', '')
+        confirm_new_password = request.form.get('confirm_new_password', '')
+        display_name = request.form.get('display_name', '')
+        member_number = request.form.get('member_number', '')
+        timezone = request.form.get('timezone', '')
         db = get_db()
         error = None
 
@@ -64,12 +68,14 @@ def register():
             error = 'Username is required'
         elif password == '':
             error = 'Password is required'
+        elif password != confirm_new_password:
+            error = 'Password and confirmation must match'
 
         if error is None:
             try:
                 new_user_role = Roles.ADMIN.value if create_first_user_as_admin else Roles.USER.value
-                db.execute('INSERT INTO user (username, password, role) VALUES (?, ?, ?)',
-                           (username, generate_password_hash(password), new_user_role)
+                db.execute('INSERT INTO user (username, password, role, display_name, member_number, timezone) VALUES (?, ?, ?, ?, ?, ?)',
+                           (username, generate_password_hash(password), new_user_role, display_name, member_number, timezone)
                            )
                 db.commit()
             except db.IntegrityError:

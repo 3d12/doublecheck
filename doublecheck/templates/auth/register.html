@@ -27,6 +27,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   <input name="username" id="username" required>
   <label for="password">Password</label>
   <input type="password" name="password" id="password" required>
+  <label for="confirm_new_password">Confirm New Password</label>
+  <input type="password" name="confirm_new_password" id="confirm_new_password" required>
+  <label for="display_name">Display Name (optional, defaults to username)</label>
+  <input name="display_name" id="display_name">
+  <label for="member_number">Member Number (optional)</label>
+  <input name="member_number" id="member_number">
+  <label for="timezone">Timezone (optional, defaults to GMT)</label>
+  <input name="timezone" id="timezone">
   <input type="submit" value="Register">
 </form>
 {% endblock %}

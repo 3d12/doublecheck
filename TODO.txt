@@ -1,12 +1,16 @@
 # TODO
-1. Create admin log page, where all admin actions logged are displayed
-2. Update Register page to roughly match admin user edit page
-3. Add "display name" to register page and user table
-  - Implement display name into the main blog page
-4. Add "member number" to register page and user table
-  - Implement member number into the main blog page
-  - Implement member number into the new post page, allowing white and black to reference other users
-5. Create user page, where games posted by user and games featuring user can both be seen
-6. Implement game-level comments
+1. Implement display name into the main blog page
+2. Implement member number into the main blog page
+3. Change Timezone on register and admin edit screens to a drop-down
+4. Create user edit page for user to edit their own account parameters
+5. Add moderation tools to posts so moderators and admins can regulate post content
+6. Create admin log page, where all admin actions logged are displayed
+7. Create user page, where games posted by user and games featuring user can both be seen
+8. Implement game-level comments
   - Should see most recent X comments on the main page (along with "show more" button)
   - Should see whole list of comments on the view game page, and have textbox to add another
+9. Implement member number into the new post page, allowing white and black to reference other users
+  - This shouldn't just be member number, this should be using User.id behind the scenes but should
+    ideally allow fuzzy matching and completion suggestions based on username and/or member #
+10. Implement DTOs for cleaner integration to db backend
+  - This can be done with python dataclasses

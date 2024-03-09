@@ -40,8 +40,9 @@ def test_first_registration(app_with_no_data, create_first_user_as_admin, regist
             # register new user
             response = client.post(
                     '/auth/register',
-                    data={'username': 'firstuser', 'password': 'admin'}
+                    data={'username': 'firstuser', 'password': 'admin', 'confirm_new_password': 'admin'}
                     )
+            print(response.data)
             assert response.headers['Location'] == '/auth/login'
             # make sure register link no longer appears on index, but only if
             #   registration is supposed to be disabled
@@ -69,7 +70,7 @@ def test_register(client, app):
         app.config['REGISTRATION_ENABLED'] = True
     assert client.get('/auth/register').status_code == 200
     response = client.post(
-            '/auth/register', data={'username': 'a', 'password': 'a'}
+            '/auth/register', data={'username': 'a', 'password': 'a', 'confirm_new_password': 'a'}
             )
     assert response.headers['Location'] == '/auth/login'
 
@@ -78,18 +79,19 @@ def test_register(client, app):
                 "SELECT * FROM user WHERE username = 'a'",
                 ).fetchone() is not None
 
-@pytest.mark.parametrize(('username', 'password', 'message'), (
-    ('', '', b'Username is required'),
-    ('a', '', b'Password is required'),
-    ('test', 'test', b'already registered')
+@pytest.mark.parametrize(('username', 'password', 'confirm', 'message'), (
+    ('', '', '', b'Username is required'),
+    ('a', '', '', b'Password is required'),
+    ('test', 'test', 'test', b'already registered'),
+    ('test_mismatch_pw', 'test', 'nope', b'Password and confirmation must match')
     ))
-def test_tegister_validate_input(client, username, password, message, app):
+def test_register_validate_input(client, username, password, confirm, message, app):
     # make sure registration is enabled via config
     with app.app_context():
         app.config['REGISTRATION_ENABLED'] = True
     response = client.post(
             '/auth/register',
-            data={'username': username, 'password': password}
+            data={'username': username, 'password': password, 'confirm_new_password': confirm}
             )
     assert message in response.data
 
