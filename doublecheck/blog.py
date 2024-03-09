@@ -43,7 +43,7 @@ def index():
 
     db = get_db()
     posts = db.execute(
-            'SELECT p.id, p.title, p.body, p.created, p.author_id, u.username, f.id as game_id, f.file_contents'
+            'SELECT p.id, p.title, p.body, p.created, p.author_id, u.username, u.display_name, u.member_number, f.id as game_id, f.file_contents'
             ' FROM post p '
             ' JOIN user u ON (p.author_id = u.id)'
             ' LEFT JOIN file f ON (p.id = f.post_id)'
